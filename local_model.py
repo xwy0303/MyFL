@@ -28,7 +28,7 @@ class Net(nn.Module):
         output = nn.functional.log_softmax(x, dim=1)
         return output
 
-def local_train(model, train_loader, optimizer, epoch, train_losses, train_accuracies):
+def local_train(model, train_loader, optimizer, epoch, userid, train_losses, train_accuracies):
     model.train()
     correct = 0
     total = 0
@@ -36,14 +36,14 @@ def local_train(model, train_loader, optimizer, epoch, train_losses, train_accur
         optimizer.zero_grad()
         output = model(data)
         loss = nn.functional.nll_loss(output, target)
+        loss2 = loss
         loss.backward()
         optimizer.step()
         _, predicted = torch.max(output.data, 1)
         total += target.size(0)
         correct += (predicted == target).sum().item()
         if batch_idx % 100 == 0:
-            print('Train Epoch: {} {:.0f}%\tLoss: {:.6f}'.format(
-                epoch, batch_idx * len(data), len(train_loader.dataset),
-                100. * batch_idx / len(train_loader), loss.item()))
             train_losses.append(loss.item())
             train_accuracies.append(100. * correct / total)
+    print('Train Epoch: {} userid: {}\tLoss: {:.6f}'.format(
+        epoch, userid, loss2.item()))
