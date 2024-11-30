@@ -1,4 +1,5 @@
 import torch
+from local_model import Net
 
 def secure_aggregation(models):
     aggregated_model = Net()  # 这里假设Net类在local_model.py中已经定义
