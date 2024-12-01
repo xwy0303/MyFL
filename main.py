@@ -12,7 +12,7 @@ if __name__ == '__main__':
     num_nodes = 10
     batch_size = 64
     learning_rate = 0.01
-    epochs = 5
+    epochs = 30
 
     # 获取数据集
     mnist_train_split, mnist_test = get_datasets()
@@ -45,7 +45,7 @@ if __name__ == '__main__':
         # 投毒攻击
         fedimp = FedIMP()
         mean_update, std_update = fedimp.calcMeanAndStd(local_models)
-        mean_model = secure_aggregation(local_models)
+        mean_model = secure_aggregation(local_models,n_attackers=1)
         fisher_informations = []
         size_pois_dataset = []
 
@@ -68,7 +68,7 @@ if __name__ == '__main__':
             local_models.append(model)
 
         # 全局模型聚合
-        global_model = secure_aggregation(local_models)
+        global_model = secure_aggregation(local_models,1)
 
         # 测试全局模型
         global_accuracy = test(global_model, test_loader)
@@ -85,6 +85,8 @@ if __name__ == '__main__':
     plt.xlabel('Iteration')
     plt.ylabel('Loss')
     plt.legend()
+    plt.xlim(0,30)
+    plt.ylim(0,100)
 
     # 绘制训练准确率
     plt.subplot(1, 2, 2)
@@ -93,6 +95,8 @@ if __name__ == '__main__':
     plt.xlabel('Iteration')
     plt.ylabel('Accuracy')
     plt.legend()
+    plt.xlim(0,30)
+    plt.ylim(0,100)
 
     # 绘制测试准确率
     plt.figure()
@@ -101,5 +105,7 @@ if __name__ == '__main__':
     plt.xlabel('Epoch')
     plt.ylabel('Accuracy')
     plt.legend()
+    plt.xlim(0,30)
+    plt.ylim(0,100)
 
     plt.show()
