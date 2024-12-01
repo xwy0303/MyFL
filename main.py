@@ -14,7 +14,7 @@ if __name__ == '__main__':
     num_nodes = 10
     batch_size = 64
     learning_rate = 0.01
-    epochs = 100
+    epochs = 30
 
     # 获取数据集
     mnist_train_split, mnist_test = get_datasets()
