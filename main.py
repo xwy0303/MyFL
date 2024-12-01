@@ -2,6 +2,7 @@
 import torch
 import torch.utils.data as data
 import matplotlib.pyplot as plt
+import pandas as pd
 from data_loader import get_datasets, get_data_loaders
 from local_model import Net, local_train
 from secure_aggregation import secure_aggregation
@@ -26,6 +27,13 @@ if __name__ == '__main__':
     train_losses = []
     train_accuracies = []
     test_accuracies = []
+
+    # 创建DataFrame来存储准确率数据
+    acc_data = {
+        'Epoch': [],
+        'Accuracy': []
+    }
+    acc_df = pd.DataFrame(acc_data)
 
     for epoch in range(1, epochs + 1):
         epoch_train_losses = []
@@ -58,6 +66,7 @@ if __name__ == '__main__':
         # 测试全局模型
         global_accuracy = test(global_model, test_loader)
         print("epoch: {}, acc: {}".format(epoch, global_accuracy))
+
         test_accuracies.append(global_accuracy)
 
     # 绘制训练损失和准确率图表
@@ -88,3 +97,6 @@ if __name__ == '__main__':
     plt.legend()
 
     plt.show()
+
+    # 保存DataFrame为Excel文件
+    acc_df.to_excel('acc_with_attack_model.xlsx', index=False)
