@@ -17,11 +17,11 @@ if __name__ == '__main__':
     epochs = 30
 
     # 获取数据集
-    mnist_train_split, mnist_test = get_datasets()
+    fmnist_train_split, fmnist_test = get_datasets()
 
     # 创建数据加载器列表
-    train_loaders = get_data_loaders(mnist_train_split, batch_size)
-    test_loader = torch.utils.data.DataLoader(mnist_test, batch_size=batch_size, shuffle=False)
+    train_loaders = get_data_loaders(fmnist_train_split, batch_size)
+    test_loader = torch.utils.data.DataLoader(fmnist_test, batch_size=batch_size, shuffle=False)
 
     # 初始化存储训练损失和准确率的列表
     train_losses = []
