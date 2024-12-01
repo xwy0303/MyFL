@@ -67,8 +67,10 @@ if __name__ == '__main__':
         global_accuracy = test(global_model, test_loader)
         print("epoch: {}, acc: {}".format(epoch, global_accuracy))
         test_accuracies.append(global_accuracy)
+
         # 将当前轮的准确率添加到DataFrame中
-        acc_df = acc_df.append({'Epoch': epoch, 'Accuracy': global_accuracy}, ignore_index=True)
+        new_row = pd.DataFrame({'Epoch': [epoch], 'Accuracy': [global_accuracy]})
+        acc_df = pd.concat([acc_df, new_row], ignore_index=True)
 
     # 绘制训练损失和准确率图表
     plt.figure(figsize=(12, 5))
