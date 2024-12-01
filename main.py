@@ -16,6 +16,7 @@ if __name__ == '__main__':
     learning_rate = 0.01
     epochs = 30
 
+
     # 获取数据集
     fmnist_train_split, fmnist_test = get_datasets()
 
