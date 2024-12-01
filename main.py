@@ -13,7 +13,7 @@ if __name__ == '__main__':
     num_nodes = 10
     batch_size = 64
     learning_rate = 0.01
-    epochs = 5
+    epochs = 100
 
     # 获取数据集
     mnist_train_split, mnist_test = get_datasets()
@@ -44,7 +44,7 @@ if __name__ == '__main__':
         train_accuracies.extend(epoch_train_accuracies)
 
         # 投毒攻击
-        num_malicious = 3  # 假设有3个恶意节点
+        num_malicious = 1  # 假设有3个恶意节点
         cmp = CMP(num_malicious)
         malicious_model = Net()
         malicious_model = cmp.create_model_from_update(malicious_model, None)
@@ -53,7 +53,7 @@ if __name__ == '__main__':
             local_models.append(malicious_model)
 
         # 全局模型聚合
-        global_model = secure_aggregation(local_models)
+        global_model = secure_aggregation(local_models, num_malicious)  # 这里添加了 num_malicious 作为参数
 
         # 测试全局模型
         global_accuracy = test(global_model, test_loader)
