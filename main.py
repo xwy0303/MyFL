@@ -12,7 +12,7 @@ if __name__ == '__main__':
     num_nodes = 10
     batch_size = 64
     learning_rate = 0.01
-    epochs = 100
+    epochs = 30
 
     # 获取数据集
     mnist_train_split, mnist_test = get_datasets()
@@ -56,7 +56,7 @@ if __name__ == '__main__':
         poison_attack.apply_update(updates)
 
         # 全局模型聚合
-        global_model = secure_aggregation(local_models)
+        global_model = secure_aggregation(local_models, n_attackers=1)
 
         # 测试全局模型
         global_accuracy = test(global_model, test_loader)
