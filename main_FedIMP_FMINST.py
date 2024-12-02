@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from data_loader import get_datasets, get_data_loaders
 from local_model import Net, local_train
-from secure_aggregation import secure_aggregation
+from secure_aggregation import secure_aggregation  # 确保这是Krum算法的实现
 from utils import test
 from attack_module import FedIMP
 
@@ -14,13 +14,14 @@ if __name__ == '__main__':
     batch_size = 64
     learning_rate = 0.01
     epochs = 30
+    n_attackers = 1  # 假设攻击者数量为1
 
     # 获取数据集
-    mnist_train_split, mnist_test = get_datasets()
+    fmnist_train_split, fmnist_test = get_datasets()
 
     # 创建数据加载器列表
-    train_loaders = get_data_loaders(mnist_train_split, batch_size)
-    test_loader = data.DataLoader(mnist_test, batch_size=batch_size, shuffle=False)
+    train_loaders = get_data_loaders(fmnist_train_split, batch_size)
+    test_loader = data.DataLoader(fmnist_test, batch_size=batch_size, shuffle=False)
 
     # 初始化存储训练损失和准确率的列表
     train_losses = []
@@ -33,10 +34,6 @@ if __name__ == '__main__':
         'Accuracy': []
     }
     acc_df = pd.DataFrame(acc_data)
-
-    for epoch in range(1, epochs + 1):
-        epoch_train_losses = []
-        epoch_train_accuracies = []
 
     for epoch in range(1, epochs + 1):
         epoch_train_losses = []
@@ -57,12 +54,11 @@ if __name__ == '__main__':
         # 投毒攻击
         fedimp = FedIMP()
         mean_update, std_update = fedimp.calcMeanAndStd(local_models)
-        mean_model = secure_aggregation(local_models,n_attackers=1)
         fisher_informations = []
         size_pois_dataset = []
 
         for i in range(num_nodes):
-            fisher_info = fedimp.calcFisherInfo(mean_model, train_loaders[i])
+            fisher_info = fedimp.calcFisherInfo(local_models[0], train_loaders[i])  # 使用第一个模型作为mean_model
             fisher_informations.append(fisher_info)
             size_pois_dataset.append(len(train_loaders[i].dataset))
 
@@ -73,14 +69,11 @@ if __name__ == '__main__':
         print("delta:{}".format(delta))
 
         malicious_update = fedimp.genMaliciousUpdate(mean_update, std_update, binary_mask, delta)
-        model = Net()
-        fedimp.create_model_from_update(model, malicious_update)
+        malicious_model = Net()
+        fedimp.create_model_from_update(malicious_model, malicious_update)
 
-        for i in range(num_nodes):
-            local_models.append(model)
-
-        # 全局模型聚合
-        global_model = secure_aggregation(local_models,1)
+        # 全局模型聚合（不包括恶意模型）
+        global_model = secure_aggregation(local_models, n_attackers=n_attackers)
 
         # 测试全局模型
         global_accuracy = test(global_model, test_loader)
@@ -101,8 +94,6 @@ if __name__ == '__main__':
     plt.xlabel('Iteration')
     plt.ylabel('Loss')
     plt.legend()
-    plt.xlim(0,30)
-    plt.ylim(0,100)
 
     # 绘制训练准确率
     plt.subplot(1, 2, 2)
@@ -111,8 +102,6 @@ if __name__ == '__main__':
     plt.xlabel('Iteration')
     plt.ylabel('Accuracy')
     plt.legend()
-    plt.xlim(0,30)
-    plt.ylim(0,100)
 
     # 绘制测试准确率
     plt.figure()
@@ -121,8 +110,6 @@ if __name__ == '__main__':
     plt.xlabel('Epoch')
     plt.ylabel('Accuracy')
     plt.legend()
-    plt.xlim(0,30)
-    plt.ylim(0,100)
 
     plt.show()
 
