@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from data_loader import get_datasets, get_data_loaders
 from local_model import Net, local_train
-from secure_aggregation import secure_aggregation
+from secure_aggregation import trimmed_mean_aggregation
 from utils import test
 from attack_model import CMP  # 导入新的攻击模型
 
@@ -62,7 +62,7 @@ if __name__ == '__main__':
             local_models.append(malicious_model)
 
         # 全局模型聚合
-        global_model = secure_aggregation(local_models, num_malicious)  # 这里添加了 num_malicious 作为参数
+        global_model = trimmed_mean_aggregation(local_models, num_malicious)  # 这里添加了 num_malicious 作为参数
 
         # 测试全局模型
         global_accuracy = test(global_model, test_loader)

@@ -1,49 +1,46 @@
 import torch
 import numpy as np
 from local_model import Net
-import heapq
 
-def euclidean_distance(x, y):
-    x_tensor = torch.cat([v.view(-1) for v in x.values()])
-    y_tensor = torch.cat([v.view(-1) for v in y.values()])
-    return np.linalg.norm(x_tensor.cpu().numpy() - y_tensor.cpu().numpy())
 
-def secure_aggregation(models, n_attackers):
+def trimmed_mean_aggregation(models, num_malicious):
     if not models:
         raise ValueError("模型列表不能为空。")
+
     num_clients = len(models)
-    if n_attackers >= num_clients - 2:
-        raise ValueError("攻击者数量不能大于等于客户端总数减去2。")
+    if num_malicious >= num_clients / 2:
+        raise ValueError("恶意客户端数量不能超过客户端总数的一半。")
 
-    # 计算每个客户端到其他客户端的距离
-    dist_matrix = np.zeros((num_clients, num_clients))
-    for i in range(num_clients):
-        for j in range(i + 1, num_clients):
-            dist = euclidean_distance(models[i].state_dict(), models[j].state_dict())
-            dist_matrix[i, j] = dist
-            dist_matrix[j, i] = dist
+    # 计算修剪比例
+    trim_ratio = min(num_malicious / num_clients, 0.5)
 
-    # 为每个客户端计算所有其他客户端的距离之和，去掉最大的n_attackers+1个距离
-    k = num_clients - n_attackers - 2
-    if k <= 0:
-        raise ValueError("没有足够的非攻击者客户端来执行Krum聚合。")
+    # 计算要修剪的数量
+    num_to_trim = int(num_clients * trim_ratio)
+    if num_to_trim < 1:
+        num_to_trim = 1
 
-    sum_dists = []
-    for i in range(num_clients):
-        sorted_indices = np.argsort(dist_matrix[i])
-        sum_dist = np.sum(dist_matrix[i, sorted_indices[1:k+1]])  # 排除自身，取k个最小距离
-        sum_dists.append((sum_dist, i))
-
-    # 选择距离之和最小的客户端
-    _, selected_index = min(sum_dists, key=lambda x: x[0])
-
-    # 返回被选中的客户端的模型
-    selected_model = models[selected_index]
     aggregated_model = Net()
-    aggregated_model.load_state_dict(selected_model.state_dict())
-    return aggregated_model
+    for param in aggregated_model.parameters():
+        param.data.zero_()
 
-# 使用示例
-# models = [Net() for _ in range(10)]  # 假设这里有10个客户端模型
-# n_attackers = 2
-# secure_model = krum_aggregation(models, n_attackers)
+    # 对每个参数进行处理
+    for param_name in aggregated_model.state_dict().keys():
+        param_values = [model.state_dict()[param_name].view(-1) for model in models]
+
+        # 将参数值堆叠成一个矩阵
+        param_matrix = torch.stack(param_values, dim=0)
+
+        # 按照每个元素进行排序
+        sorted_param_matrix, _ = torch.sort(param_matrix, dim=0)
+
+        # 去除最大和最小的num_to_trim个值
+        trimmed_param_matrix = sorted_param_matrix[num_to_trim:-num_to_trim, :]
+
+        # 计算剩余值的平均值
+        aggregated_value = trimmed_param_matrix.mean(dim=0)
+
+        # 更新聚合模型的参数
+        aggregated_model.state_dict()[param_name].copy_(
+            aggregated_value.view(aggregated_model.state_dict()[param_name].size()))
+
+    return aggregated_model
