@@ -1,10 +1,10 @@
 import torch
 
-from local_model import Net
+from local_model import CNNNet
 
 
 def secure_aggregation(models):
-    aggregated_model = Net()  # 这里假设Net类在local_model.py中已经定义
+    aggregated_model = CNNNet()  # 这里假设Net类在local_model.py中已经定义
     for param in aggregated_model.parameters():
         param.data.zero_()
     for model in models:

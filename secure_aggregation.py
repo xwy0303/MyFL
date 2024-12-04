@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from local_model import Net
+from local_model import CNNNet
 
 
 def trimmed_mean_aggregation(models, num_malicious):
@@ -19,7 +19,7 @@ def trimmed_mean_aggregation(models, num_malicious):
     if num_to_trim < 1:
         num_to_trim = 1
 
-    aggregated_model = Net()
+    aggregated_model = CNNNet()
     for param in aggregated_model.parameters():
         param.data.zero_()
 

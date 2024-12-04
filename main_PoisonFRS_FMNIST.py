@@ -3,7 +3,7 @@ import torch.utils.data as data
 import matplotlib.pyplot as plt
 import pandas as pd
 from data_loader import get_datasets, get_data_loaders
-from local_model import Net, local_train
+from local_model import CNNNet, local_train
 from secure_aggregation import trimmed_mean_aggregation
 from utils import test
 from attack_model import PoisonFRS
@@ -41,7 +41,7 @@ if __name__ == '__main__':
         # 成员节点训练模型列表
         local_models = []
         for i in range(num_nodes):
-            model = Net()
+            model = CNNNet()
             optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
             local_train(model, train_loaders[i], optimizer, epoch, i, epoch_train_losses, epoch_train_accuracies)
             local_models.append(model)
