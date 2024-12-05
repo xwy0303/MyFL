@@ -33,12 +33,23 @@ class CMP:
         min_distance_index = torch.argmin(torch.tensor(distances)).item()
         return models[min_distance_index]
 
-    def create_model_from_update(self, model, malicious_update):
-        # 创建一个与模型结构相同的随机更新
-        state_dict = model.state_dict()
-        malicious_state_dict = {}
-        for key in state_dict.keys():
-            # 生成与模型参数形状相同的随机张量
-            malicious_state_dict[key] = torch.randn_like(state_dict[key])
+    def create_model_from_update(self, model, update):
+        """
+        创建一个包含随机更新的恶意模型。
+
+        参数：
+        model (Net): 基础模型。
+        update (Tensor): 模型更新。
+
+        返回：
+        malicious_model (Net): 包含随机更新的恶意模型。
+        """
+        malicious_state_dict = model.state_dict()
+        for key in malicious_state_dict.keys():
+            # 确保张量是浮点数类型
+            if malicious_state_dict[key].dtype == torch.long:
+                malicious_state_dict[key] = malicious_state_dict[key].float()
+            # 生成与模型参数形状相同的标准正态分布随机数
+            malicious_state_dict[key] = torch.randn_like(malicious_state_dict[key], dtype=torch.float32)
         model.load_state_dict(malicious_state_dict)
         return model
