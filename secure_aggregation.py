@@ -14,64 +14,72 @@ def euclidean_distance(x, y):
     返回：
     float：欧几里得距离。
     """
-    x_tensor = torch.cat([v.view(-1) for v in x.values()])
-    y_tensor = torch.cat([v.view(-1) for v in y.values()])
-    return np.linalg.norm(x_tensor.cpu().numpy() - y_tensor.cpu().numpy())
+    x_tensor = torch.cat([v.view(-1) for v in x.values()], dim=0)
+    y_tensor = torch.cat([v.view(-1) for v in y.values()], dim=0)
+    return torch.linalg.norm(x_tensor - y_tensor).item()
 
+def build_distance_matrix(models):
+    num_clients = len(models)
+    model_tensors = [torch.cat([v.view(-1) for v in model.state_dict().values()], dim=0) for model in models]
+    model_tensors = torch.stack(model_tensors)
+    i_indices, j_indices = np.triu_indices(num_clients, 1)
+    dist_matrix = torch.zeros((num_clients, num_clients))
+    for i, j in zip(i_indices, j_indices):
+        dist = euclidean_distance(models[i].state_dict(), models[j].state_dict())
+        dist_matrix[i, j] = dist
+        dist_matrix[j, i] = dist
+    return dist_matrix
 
-def secure_aggregation(models, n_attackers):
-    """
-    执行安全聚合操作，类似于Krum算法。
+def calculate_scores(dist_matrix, f):
+    num_clients = dist_matrix.size(0)
+    # 转置距离矩阵以优化排序和求和操作
+    transposed_dist_matrix = dist_matrix.t()
+    # 对转置后的矩阵列进行排序，获取排序后的索引矩阵
+    sorted_indices_matrix = torch.argsort(transposed_dist_matrix, dim=1)
+    scores = []
 
-    参数：
-    models (list)：包含客户端模型的列表。
-    n_attackers (int)：攻击者的数量。
+    for i in range(num_clients):
+        # 针对f为0的情况单独处理，直接将自身到自身距离（为0）作为分数
+        if f == 0:
+            scores.append(0.0)
+            continue
 
-    返回：
-    Net：聚合后的模型。
-    """
+        end_index = min(f + 1, num_clients)
+        # 修正切片起始索引从0开始，这样能正确取到f个近邻（不含自身）的距离进行求和
+        sum_dist = torch.sum(transposed_dist_matrix[i, sorted_indices_matrix[i, 0:end_index - 1]])
+        scores.append(sum_dist.item())
+
+    return scores
+
+def select_models(scores, m):
+    selected_indices = np.argsort(scores)[:m]
+    return selected_indices
+
+def multi_krum(models, f, m, distance_threshold=None):
     # 检查输入有效性
     if not models:
         raise ValueError("模型列表不能为空。")
-    if n_attackers >= len(models):
-        raise ValueError("攻击者数量不能大于或等于客户端数量。")
+    if f >= len(models):
+        raise ValueError("拜占庭攻击者数量不能大于或等于客户端数量。")
+    if m > len(models) - f or m <= 0:
+        raise ValueError("m 的取值应满足 0 < m <= n - f。")
 
-    num_clients = len(models)
     aggregated_model = Net()
     for param in aggregated_model.parameters():
         param.data.zero_()
 
-    # 一次性将模型参数转换为张量并存储
-    model_tensors = [torch.cat([v.view(-1) for v in model.state_dict().values()]) for model in models]
+    dist_matrix = build_distance_matrix(models)
+    # 增加对模型参数合法性的检查（这里简单示例检查是否有NaN值）
+    for model in models:
+        for param in model.parameters():
+            if torch.isnan(param).any():
+                raise ValueError("模型参数中存在非法的NaN值")
 
-    # 计算距离矩阵（只计算上三角部分）
-    dist_matrix = np.zeros((num_clients, num_clients))
-    for i in range(num_clients):
-        for j in range(i + 1, num_clients):
-            dist = np.linalg.norm(model_tensors[i].cpu().numpy() - model_tensors[j].cpu().numpy())
-            dist_matrix[i, j] = dist
-            dist_matrix[j, i] = dist
-
-    # 计算每个参与者的距离和，并选择距离和最小的模型（这里选择多个，示例中选择2个，可根据Krum算法调整）
-    min_sum_dists = []
-    selected_indices = []
-    for i in range(num_clients):
-        sorted_indices = np.argsort(dist_matrix[i])
-        sum_dist = np.sum(dist_matrix[i, sorted_indices[1:(n_attackers + 1)]])
-        if len(min_sum_dists) < 2 or sum_dist < max(min_sum_dists):
-            if len(min_sum_dists) == 2:
-                min_sum_dists.remove(max(min_sum_dists))
-                selected_indices.remove(selected_indices[min_sum_dists.index(max(min_sum_dists))])
-            min_sum_dists.append(sum_dist)
-            selected_indices.append(sorted_indices[0])
-
-    # 聚合选中模型的参数
-    for param in aggregated_model.parameters():
-        param.data.zero_()
-    for i in selected_indices:
-        for param, selected_param in zip(aggregated_model.parameters(), models[i].parameters()):
-            param.data += selected_param.data
-    for param in aggregated_model.parameters():
-        param.data /= len(selected_indices)
+    scores = calculate_scores(dist_matrix, f)
+    selected_indices = select_models(scores, m)
+    selected_models = [models[i] for i in selected_indices]
+    with torch.no_grad():  # 不需要计算梯度，提高效率并避免不必要的计算图构建
+        for target_param, source_params in zip(aggregated_model.parameters(), zip(*[s_model.parameters() for s_model in selected_models])):
+            target_param.data.copy_(torch.stack(source_params).sum(dim=0) / m)
 
     return aggregated_model
