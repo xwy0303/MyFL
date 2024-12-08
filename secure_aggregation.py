@@ -59,10 +59,10 @@ def multi_krum(models, f, m, distance_threshold=None):
     # 检查输入有效性
     if not models:
         raise ValueError("模型列表不能为空。")
-    if f >= len(models):
-        raise ValueError("拜占庭攻击者数量不能大于或等于客户端数量。")
-    if m > len(models) - f or m <= 0:
-        raise ValueError("m 的取值应满足 0 < m <= n - f。")
+    # if f >= len(models):
+    #     raise ValueError("拜占庭攻击者数量不能大于或等于客户端数量。")
+    # if m > len(models) - f or m <= 0:
+    #     raise ValueError("m 的取值应满足 0 < m <= n - f。")
 
     aggregated_model = Net()
     for param in aggregated_model.parameters():
