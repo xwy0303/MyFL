@@ -1,7 +1,7 @@
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
 
 class Net(nn.Module):
     def __init__(self):
@@ -37,7 +37,6 @@ def local_train(model, train_loader, optimizer, epoch, userid, train_losses, tra
         optimizer.zero_grad()
         output = model(data)
         loss = nn.functional.nll_loss(output, target)
-        loss2 = loss
         loss.backward()
         optimizer.step()
         _, predicted = torch.max(output.data, 1)
@@ -47,4 +46,4 @@ def local_train(model, train_loader, optimizer, epoch, userid, train_losses, tra
             train_losses.append(loss.item())
             train_accuracies.append(100. * correct / total)
     print('Train Epoch: {} userid: {}\tLoss: {:.6f}'.format(
-        epoch, userid, loss2.item()))
+        epoch, userid, loss.item()))  # 这里统一使用loss.item()，避免之前可能存在的不一致情况

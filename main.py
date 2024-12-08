@@ -6,7 +6,7 @@ from data_loader import get_datasets, get_data_loaders
 from local_model import Net, local_train
 from fedavg import fedavg, client_update
 from utils import test
-from secure_aggregation import
+# from secure_aggregation import
 from attack_model import CMP
 
 if __name__ == '__main__':
@@ -14,7 +14,7 @@ if __name__ == '__main__':
     num_nodes = 10
     batch_size = 64
     learning_rate = 0.01
-    epochs = 30
+    epochs = 100
     local_epochs = 1  # 每个客户端在通信轮次之间执行的本地训练轮数
 
     # 获取数据集
@@ -42,11 +42,11 @@ if __name__ == '__main__':
         models = []
         weights = []
 
-        # 添加正常模型
+        # 添加正常模型并训练
         for i in range(num_nodes):
             model = Net()  # 实例化模型
             optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
-            # 训练模型并传递对应的损失和准确率列表
+            # 使用 local_train 函数训练模型
             local_train(model, train_loaders[i], optimizer, epoch, i, train_losses[i], train_accuracies[i])
             models.append(model)
             weights.append(1.0 / num_nodes)  # 假设每个客户端的权重相等
@@ -55,6 +55,12 @@ if __name__ == '__main__':
 
         # 聚合模型
         global_model = fedavg(models, weights)
+
+        # 使用 client_update 更新客户端模型
+        for i in range(num_nodes):
+            model = global_model  # 使用当前全局模型初始化
+            optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+            client_update(model, train_loaders[i], optimizer, local_epochs, batch_size)
 
         # 测试全局模型
         global_accuracy = test(global_model, test_loader)
