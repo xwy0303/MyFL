@@ -45,5 +45,9 @@ def local_train(model, train_loader, optimizer, epoch, userid, train_losses, tra
         if batch_idx % 100 == 0:
             train_losses.append(loss.item())
             train_accuracies.append(100. * correct / total)
-    print('Train Epoch: {} userid: {}\tLoss: {:.6f}'.format(
-        epoch, userid, loss2.item()))
+    # 计算每一轮的检测准确率
+    acc = 100. * correct / total
+    print('Train Epoch: {} userid: {}\tLoss: {:.6f}\tAccuracy: {:.2f}%'.format(
+        epoch, userid, loss2.item(), acc))
+    # 返回每一轮的检测准确率
+    return acc

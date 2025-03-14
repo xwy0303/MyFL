@@ -13,7 +13,7 @@ if __name__ == '__main__':
     # 定义超参数
     num_nodes = 10
     batch_size = 64
-    learning_rate = 0.01
+    learning_rate = 0.2
     epochs = 30
 
 
